@@ -92,5 +92,13 @@ Fifa[,29:54] <- NULL
 
 Fifa <- cbind.data.frame(Fifa, dff)
 
-)
-write.csv(Fifa,'basetable.csv')
+
+ggplot(Fifa) +
+  geom_tile(aes(Overall, Potential, fill = Age)) + 
+  scale_fill_distiller(palette = "Spectral") + 
+  theme( panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank(),
+         panel.background = element_blank(), 
+         axis.line = element_line(colour = "black"))
+
+

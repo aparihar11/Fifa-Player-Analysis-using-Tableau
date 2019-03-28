@@ -8,6 +8,7 @@ library(shinycssloaders)
 library(shiny)
 library(shinydashboard)
 library(plotly)
+library(ggrepel)
 
 
 
@@ -31,57 +32,57 @@ Fifa1<-Fifa[1:1000,1:10]
   
   ###########Graph 1############
   output$graph1<- renderPlotly({
-    output=getuseragg()
+    output=SquadValue()
     output
   })
   
   ###########Graph 2############
   output$graph2<-renderPlotly({
-    output=getpoker()
+    output=TopWage()
     output
     
   })
   
   ###########Graph 3############
   output$graph3<-renderPlotly({
-    output=getusergender()
+    output=SuperStars()
     output
   })
   
-  ###########Graph 4############
-  output$graph4<-renderPlotly({
-    new<-getage()
-    new
-  })
+
   
   ###########Graph 5############
-  output$graph5<-renderPlotly({
-    new<-getcountry()
+  output$graph4<-renderPlotly({
+    new<-YoungestSquad()
     new
   })
   
-  ###########Graph 6############
-  output$graph6<-renderPlotly({
-    new<-getlos()
-    new
-  })
-  
+
   ###########Graph 7############
-  output$graph7<-renderPlot({
-    new<-gettopapp()
+  output$graph5<-renderPlotly({
+    new<-Playerjersey()
     new
   })
   
   ###########Graph 8############
-  output$graph8<-renderDataTable({
-    new<-gettop()
+  output$graph6<-renderDataTable({
+    new<-BestFreekickers()
+    new
+  })
+  
+  ###########Graph 9############
+  output$graph7<-renderDataTable({
+    new<-MostUnfit()
+    new
+  })
+  output$graph8<-renderPlotly({
+    new<-VariationAge()
     new
   })
   
   
-  
-  ########### User Aggregration Monthwise ##############
-  getuseragg<-reactive({
+  ########### Squad Value in Millions ##############
+  SquadValue<-reactive({
     
     Fifa %>%
       group_by(Club)%>%
@@ -105,38 +106,39 @@ Fifa1<-Fifa[1:1000,1:10]
   
   
   
-  ########### Poker Monthwise ##############
-  getpoker<-reactive({
-    monthfreq <- unique(basetable[,c("USERID","poker_f2months",
-                                     "poker_m4months",
-                                     "poker_l2months")])
-    names(monthfreq) <- c("USERID","Season Start(2 Months)",
-                          "Mid-Season(4 Months)",
-                          "End Season (2 Months)")
-    monthfreq <- gather(monthfreq,Freq,value,-USERID)
-    monthfreq <- monthfreq[complete.cases(monthfreq),]
-    monthfreq$value <- as.character(monthfreq$value)
-    
-    x = factor(monthfreq$Freq,c("USERID","Season Start(2 Months)",
-                                "Mid-Season(4 Months)",
-                                "End Season (2 Months)"))
-    y = monthfreq$value
-    
-    plot_ly(y=y, x=x, histfunc='sum', type = "histogram") %>%
-      layout(title = "Poker Users by Time (Frequency)",
-             yaxis=list(type='linear'))
-    
+  ########### Top Wage Bills ##############
+  TopWage<-reactive({
+    Fifa %>%
+      group_by(Club)%>%
+      summarise(Total.Wage = round(sum(Wage)/1000000, digits =2))%>%
+      arrange(-Total.Wage)%>%
+      head(10)%>%
+      ggplot(aes(x = as.factor(Club) %>%
+                   fct_reorder(Total.Wage), y = Total.Wage, label = Total.Wage))+
+      geom_text(hjust = 0.01,inherit.aes = T, position = "identity")+
+      geom_bar(stat = "identity", fill = "violetred1")+
+      coord_flip()+
+      xlab("Club")+
+      ylab("Squad Wages in Million")
     
     
   })
   
-  ###########User gender ##############
-  getusergender<-reactive({
-    x = basetable$Gender
-    
-    plot_ly(x=x, type = "histogram") %>%
-      layout(title = "Gambling Activity by Gender")
-    
+  ###########Superstars in FIFA  ##############
+  SuperStars<-reactive({
+    Fifa %>%
+      mutate(Superstar = ifelse(Overall> 86, "Superstar","Non - Superstar"))%>%
+      group_by(Club)%>%
+      filter(Superstar=="Superstar")%>%
+      summarise(Player.Count = n())%>%
+      arrange(-Player.Count)%>%
+      ggplot(aes(x = as.factor(Club) %>%
+                   fct_reorder(Player.Count), y = Player.Count, label = Player.Count))+
+      geom_text(hjust = 0.01,inherit.aes = T, position = "identity")+
+      geom_bar(stat = "identity", fill = "palegreen2")+
+      coord_flip()+
+      xlab("Club")+
+      ylab("Number of Superstars")
     
   })
   
@@ -145,61 +147,32 @@ Fifa1<-Fifa[1:1000,1:10]
   
   
   
-  ###########Activity by age ##############
+  ###########Age Distribution amongst the Top Valued Clubs ##############
   getage<-reactive({
-    userage <- unique(basetable[,c("AGE","ApplicationID")])
-    userage <- userage[complete.cases(userage),]
+    Most.Valued.Clubs <- Fifa %>%
+      group_by(Club)%>%
+      summarise(Club.Squad.Value = round(sum(Value)/1000000))%>%
+      arrange(-Club.Squad.Value)%>%
+      head(10)
     
-    x = factor(userage$AGE)
-    plot_ly(x=x, type = "histogram") %>%
-      layout(title = "Activity by Age",
-             yaxis=list(type='linear'),
-             xaxis=list(tickangle = 270))
+    Player.List <- list()
     
-  })
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  ####Country WISE PRODUCT USAGE Overall####
-  getcountry<-reactive({
+    for (i in 1:nrow(Most.Valued.Clubs)){
+      temp.data <-  Fifa%>%
+        filter(Club == Most.Valued.Clubs[[1]][i]) 
+      
+      Player.List[[i]] <- temp.data
+    }
     
-    x = basetable$Country
+    data <- lapply(Player.List, as.data.frame) %>% bind_rows()
     
-    plot_ly(x=x, type = "histogram") %>%
-      layout(title = "Gambling Activity by Country")
+    data$Club <- as.factor(data$Club)
     
-    
-    
-  })
-  
-  #top Application by User count
-  
-  gettopapp<-reactive({
-    counts<-sort(table(basetable$ApplicationID))
-    top_5_countries<-tail(counts, 5)
-    barplot(top_5_countries, main="Top Applications by user count")
-    
-  })
-  
-  
-  
-  ###########LOS ##############
-  getlos<-reactive({
-    
-    los <- unique(basetable[,c("USERID","udarLOS")])
-    los <- los[complete.cases(los),]
-    
-    x = los$udarLOS
-    
-    plot_ly(x=x, type = "histogram") %>%
-      layout(title = "Frequency of LOS (Length of Subscription in Gambling) ")
-    
+    ggplot(data, aes(x = Club ,y = Age, fill = Club)) +
+      geom_violin(trim = F)+
+      geom_boxplot(width = 0.1)+
+      theme(axis.text.x = element_text(angle = 90), legend.position = "none")+
+      ylab("Age distribution amongst Clubs")
     
   })
   
@@ -209,12 +182,84 @@ Fifa1<-Fifa[1:1000,1:10]
   
   
   
-  ####################### Top PLAYERS #########################
-  gettop<-reactive({
-    basetable_clean_professinals<- basetable %>% filter(poker_m4months > 100 & poker_l2months >= 200 & poker_f2months>100)
-    mydata_clean_unique<-unique(basetable_clean_professinals[,c("USERID","poker_f2months","poker_m4months","poker_l2months")])
-    dset1<-head(mydata_clean_unique,10)
+  
+  
+  ####Clubs with the youngest Squad####
+  YoungestSquad<-reactive({
     
+    Fifa %>%
+      group_by(Club)%>%
+      summarise(Club.Avg.Age = round(sum(Age)/length(Age),digits = 2))%>%
+      arrange(Club.Avg.Age)%>%
+      head(10)%>%
+      ggplot(aes(x = as.factor(Club) %>%
+                   fct_reorder(Club.Avg.Age), y = Club.Avg.Age, label = Club.Avg.Age))+
+      geom_bar(stat = "identity", fill = "turquoise4")+
+      geom_text(inherit.aes = T, nudge_y = 0.5)+
+      xlab("Club")+
+      theme(axis.text.x = element_text(angle = 90))+
+      ylab("Average Squad Age")
+    
+    
+  })
+  
+  #Is player jersey number related to Overall ?
+  
+  Playerjersey<-reactive({
+    Fifa %>%
+      group_by(Jersey.Number) %>%
+      summarise(Avg.Overall = sum(Overall)/length(Jersey.Number),
+                Player.Count = sum(Jersey.Number))%>%
+      arrange(-Avg.Overall)%>%
+      ggplot(aes(x = Jersey.Number, y = Avg.Overall,col = ifelse(Avg.Overall < 70,"darkgrey", "Red")))+
+      geom_point(position = "jitter")+
+      theme(legend.position = "none")+
+      geom_text_repel(aes(label = ifelse(Avg.Overall > 70, Jersey.Number, "")))
+  })
+  
+  
+
+  
+  
+  
+  
+  
+  
+  ####################### Best free kick takers in the game #########################
+  BestFreekickers<-reactive({
+    Fifa %>%
+      arrange(-FKAccuracy, -Curve)%>%
+      dplyr::select(Name, FKAccuracy, Curve, Age, Club)%>%
+      head(10)
+    
+    
+  })
+  
+  
+  
+  ####################### Most Unfit#########################
+  MostUnfit<-reactive({
+    Fifa %>%
+      group_by(Name)%>%
+      mutate(BMI = (Weight*0.453592/(Height)^2))%>%
+      arrange(-BMI)%>%
+      select(Name, BMI)%>%
+      head(10)
+    
+    
+  })
+  
+  
+######  Variations with Age #########
+  
+  VariationAge<-reactive({
+    ggplot(Fifa) +
+      geom_tile(aes(Overall, Potential, fill = Age)) + 
+      scale_fill_distiller(palette = "Spectral") + 
+      theme( panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.background = element_blank(), 
+             axis.line = element_line(colour = "black"))
     
   })
   

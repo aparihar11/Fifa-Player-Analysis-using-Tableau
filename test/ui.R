@@ -1,5 +1,5 @@
-ui <- dashboardPage(skin = "red",
-                    dashboardHeader(title = "Bet Exchange"),
+ui <- dashboardPage(skin = "black",
+                    dashboardHeader(title = "FIFA19 Analysis"),
                     
                     dashboardSidebar(width = 350,
                                      tags$head(
@@ -11,18 +11,15 @@ ui <- dashboardPage(skin = "red",
                                      sidebarMenu(
                                        menuItem("Data", tabName = "data", icon = icon("dashboard")),
                                        menuItem("Menu", tabName = "Files", icon=icon("scale", lib = 'glyphicon'),
-                                                menuItem("Demographic Insight ", tabName = "da1", icon=icon("triangle-right", lib = 'glyphicon')),
-                                                menuItem("Activity by Gender", tabName = "da2", icon=icon("triangle-right", lib = 'glyphicon')),
-                                                menuItem("Gambling Frequency of Users", tabName = "da3", icon=icon("triangle-right", lib = 'glyphicon'),
-                                                         menuItem("For Betting ", tabName = "da4", icon=icon("globe", lib = 'glyphicon')),
-                                                         menuItem("For Poker ", tabName = "da5", icon=icon("globe", lib = 'glyphicon'))),
-                                                menuItem("Top 5 Applications", tabName = "da7", icon=icon("triangle-right", lib = 'glyphicon')),
-                                                menuItem("Top 10 Players ", tabName = "da8", icon=icon("triangle-right", lib = 'glyphicon')),
-                                                menuItem("Length of Subscription", tabName = "da6", icon=icon("triangle-right", lib = 'glyphicon')))
-                                       
-                                       
-                                       
-                                       
+                                                menuItem("Squad Value in Millions", tabName = "da1", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Top Wage", tabName = "da2", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Super Stars", tabName = "da3", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Youngest Squad", tabName = "da4", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Player jersey", tabName = "da5", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Best Free kickers ", tabName = "da6", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Most Unfit", tabName = "da7", icon=icon("triangle-right", lib = 'glyphicon')),
+                                                menuItem("Variation Age", tabName = "da8", icon=icon("triangle-right", lib = 'glyphicon')))
+                                           
                                      )),
                     dashboardBody(
                       
@@ -37,59 +34,62 @@ ui <- dashboardPage(skin = "red",
                         
                         # FirST tab content
                         
-                        tabItem(tabName = "da4",
+                        tabItem(tabName = "da1",
                                 # FirST tab content
-                                tabPanel("Product/User",
+                                tabPanel("Squad Value in Millions",
                                          wellPanel(fluidRow(plotlyOutput("graph1")))
                                          
                                 )
                         ),
                         tabItem(tabName = "da2",
-                                tabPanel("one",
+                                tabPanel("Top Wage",
+                                         wellPanel(fluidRow(plotlyOutput("graph2")))
+                                         
+                                )
+                        ),
+                        tabItem(tabName = "da3",
+                                tabPanel("Super Stars",
                                          wellPanel(fluidRow(plotlyOutput("graph3")))
                                          
                                 )
                         ),
-                        tabItem(tabName = "da1",
-                                tabPanel("one",
-                                         wellPanel(fluidRow(plotlyOutput("graph5")))
-                                         
+                      
+                        tabItem(tabName = "da4",
+                                # FirST tab content
+                                
+                                tabPanel("Youngest Squad",
+                                         wellPanel(fluidRow(plotlyOutput("graph4")))
                                 )
                         ),
+                        tabItem(tabName = "da5",
+                                # FirST tab content
+                                
+                                tabPanel("Player Jersey",
+                                         wellPanel(fluidRow(DT::dataTableOutput("graph5")))
+                                )
+                        ),
+                        
                         tabItem(tabName = "da6",
-                                tabPanel("one",
+                                
+                                tabPanel("Best Freekickers",
                                          wellPanel(fluidRow(plotlyOutput("graph6")))
                                          
                                 )
                         ),
-                        
                         tabItem(tabName = "da7",
-                                tabPanel("one",
-                                         wellPanel(fluidRow(plotOutput("graph7")))
-                                         
-                                )
-                                
-                        ),
-                        tabItem(tabName = "da4",
-                                # FirST tab content
-                                
-                                tabPanel("one",
-                                         wellPanel(fluidRow(plotlyOutput("graph10")))
-                                )
+                                        # FirST tab content
+                                        
+                                        tabPanel("Most Unfit",
+                                                 wellPanel(fluidRow(DT::dataTableOutput("graph7")))
                         ),
                         tabItem(tabName = "da8",
-                                # FirST tab content
-                                
-                                tabPanel("one",
-                                         wellPanel(fluidRow(DT::dataTableOutput("graph8")))
-                                )
-                        ),
-                        tabItem(tabName = "da5",
-                                
-                                tabPanel("one",
-                                         wellPanel(fluidRow(plotlyOutput("graph2")))
-                                         
-                                )
+                                                
+                                                tabPanel("Variation Age",
+                                                         wellPanel(fluidRow(plotlyOutput("graph8")))
+                                                         
+                                                )
+                        )
+                        
                         ))
                       
                     ))
