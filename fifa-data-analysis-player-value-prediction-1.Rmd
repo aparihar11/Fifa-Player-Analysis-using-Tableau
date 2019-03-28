@@ -1,0 +1,369 @@
+---
+title: "FIFA Analysis"
+author: "Aishwarya Sharma"
+date: "February 12, 2019"
+output: html_document
+---
+<style type="text/css">
+
+h1 { /* Header 1 */
+  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+  color: DarkBlue;
+}
+
+</style>
+
+This Kaggle kernel attempts to explore player data and predict player values using a linear regression model. 
+
+I would like to mention and appreciate Jason Zivkovic's kernel which was a great source of inspiration. 
+
+The decision of datasciencetoolkit.org to stop supporting maps led to a major chunk of the code being removed as geocoding for locations using Google API resulted in repeated execution failures. I will try to find a way around it soon and get it added to the kernel at the earliest.
+
+I will keep updating the notebook as and when I come up with new things. If you like the notebook, please UPVOTE as it will keep me motivated in doing great things ahead. 
+
+
+
+
+The kernel has three sections 
+
+1.	Introduction 
+
+2.	Player EDA
+
+3.	Predicting Player Values 
+
+
+
+##1. Introduction
+The FIFA franchise by EA Sports has become a sort of gaming bible for football fans around the world.The game's popularity can be understood from the fact that last year EA and FIFA announced that more than 20 M players participated in FIFA 18's gaming competition. Despite competition from Konami's PES, FIFA dominates the market.Its latest installment, Fifa 19, sold over 4.3 M units worldwide within its first week. 
+
+
+##2. Player EDA
+
+
+```{r include=FALSE}
+library(ggrepel)
+
+library(gghighlight)
+
+library(fmsb)
+
+library(reshape2)
+
+library(colorspace)
+
+library(purrr)
+
+library(forcats)
+
+library(dplyr)
+
+library(plotly)
+
+library(stringr)
+
+library(leaflet)
+
+library(ggmap)
+
+library(ggplot2)
+
+library(caTools)
+
+Fifa <- read.csv("../input/data.csv",header = T, stringsAsFactors = F)
+
+Fifa$ValueLast <- sapply(strsplit(as.character(Fifa$Value), ""), tail, 1)
+
+Fifa$WageLast <- sapply(strsplit(as.character(Fifa$Wage), ""), tail, 1)
+
+Fifa$Release.Clause.Last <- sapply(strsplit(as.character(Fifa$Release.Clause), ""), tail, 1)
+
+extract <- function(x){
+  regexp <- "[[:digit:]]+"
+  str_extract(x, regexp)
+}
+
+temp1 <- sapply(Fifa$Value, extract)
+
+Fifa$Value <- as.numeric(temp1)
+
+temp2 <- sapply(Fifa$Wage, extract)
+
+Fifa$Wage <- as.numeric(temp2)
+
+temp3 <- sapply(Fifa$Release.Clause, extract)
+
+Fifa$Release.Clause <- as.numeric(temp3)
+
+Fifa$Wage <- ifelse(Fifa$WageLast == "M", Fifa$Wage * 1000000, Fifa$Wage * 1000)
+
+Fifa$Value <- ifelse(Fifa$ValueLast == "M", Fifa$Value * 1000000, Fifa$Value * 1000)
+
+Fifa$Release.Clause <- ifelse(Fifa$Release.Clause.Last == "M", Fifa$Release.Clause * 1000000, Fifa$Release.Clause * 1000)
+
+Fifa$Contract.Valid.Until <- as.numeric(Fifa$Contract.Valid.Until)
+
+Fifa$Remaining.Contract <- Fifa$Contract.Valid.Until - 2019
+
+Fifa$Height.Inch <- str_split(Fifa$Height,"'") 
+
+temp4 <- sapply(Fifa$Weight, extract)
+
+Fifa$Weight <- as.numeric(temp4)
+
+temp5 <- strsplit(Fifa$Height, "'")
+
+for (i in 1:length(temp5)){
+  temp5[[i]] <- as.numeric(temp5[[i]])
+} 
+
+for (i in 1:length(temp5)){
+  temp5[[i]] <- (temp5[[i]][1] * 12 ) + temp5[[i]][2]
+}
+
+temp6 <- as.numeric(unlist(temp5))
+
+Fifa$Height <- temp6
+
+dff <- Fifa[,29:54]
+
+def_fun <- function(x){
+  a <- strsplit(x, '\\+')
+  for (i in length(a)){
+    b <- sum(as.numeric(a[[i]]))
+  }
+  return (b)
+}
+
+for (i in 1: ncol(dff)){
+  dff[i] <- apply(dff[i], 1, FUN = def_fun)
+}
+
+
+
+
+
+Fifa[,29:54] <- NULL
+
+Fifa <- cbind.data.frame(Fifa, dff)
+```
+
+#Finding the most valuable teams 
+
+```{r echo=FALSE}
+Fifa %>%
+  group_by(Club)%>%
+  summarise(Club.Squad.Value = round(sum(Value)/1000000))%>%
+  arrange(-Club.Squad.Value)%>%
+  head(10)%>%
+  ggplot(aes(x = as.factor(Club) %>%
+               fct_reorder(Club.Squad.Value), y = Club.Squad.Value, label = Club.Squad.Value))+
+  geom_text(hjust = 0.01,inherit.aes = T, position = "identity")+
+  geom_bar(stat = "identity", fill = "violetred1")+
+  coord_flip()+
+  xlab("Club")+
+  ylab("Squad Value in Million")
+```
+
+No surprises here as both Spanish giants make the cut with clubs from the Premier League making up the tail end of the list. 
+
+#Top Wage Bills
+```{r echo=FALSE}
+Fifa %>%
+  group_by(Club)%>%
+  summarise(Total.Wage = round(sum(Wage)/1000000, digits =2))%>%
+  arrange(-Total.Wage)%>%
+  head(10)%>%
+  ggplot(aes(x = as.factor(Club) %>%
+               fct_reorder(Total.Wage), y = Total.Wage, label = Total.Wage))+
+  geom_text(hjust = 0.01,inherit.aes = T, position = "identity")+
+  geom_bar(stat = "identity", fill = "violetred1")+
+  coord_flip()+
+  xlab("Club")+
+  ylab("Squad Wages in Million")
+```
+
+No wonder club valuation is highly corelated to the wages the club pays ! The Spanish duo tops the list again. 
+
+
+#Superstars in FIFA 
+```{r echo=FALSE}
+Fifa %>%
+  mutate(Superstar = ifelse(Overall> 86, "Superstar","Non - Superstar"))%>%
+  group_by(Club)%>%
+  filter(Superstar=="Superstar")%>%
+  summarise(Player.Count = n())%>%
+  arrange(-Player.Count)%>%
+  ggplot(aes(x = as.factor(Club) %>%
+               fct_reorder(Player.Count), y = Player.Count, label = Player.Count))+
+  geom_text(hjust = 0.01,inherit.aes = T, position = "identity")+
+  geom_bar(stat = "identity", fill = "palegreen2")+
+  coord_flip()+
+  xlab("Club")+
+  ylab("Number of Superstars")
+```
+We've considered players with Overall greater than 86 to be Superstars in the game and again as you might've guessed by now - Real Madrid & FC Barcelona top the list with 9 players each 
+
+
+#Age Distribution amongst the Top Valued Clubs
+
+```{r echo=FALSE}
+Most.Valued.Clubs <- Fifa %>%
+  group_by(Club)%>%
+  summarise(Club.Squad.Value = round(sum(Value)/1000000))%>%
+  arrange(-Club.Squad.Value)%>%
+  head(10)
+
+Player.List <- list()
+
+for (i in 1:nrow(Most.Valued.Clubs)){
+temp.data <-  Fifa%>%
+  filter(Club == Most.Valued.Clubs[[1]][i]) 
+
+Player.List[[i]] <- temp.data
+}
+
+data <- lapply(Player.List, as.data.frame) %>% bind_rows()
+
+data$Club <- as.factor(data$Club)
+
+ggplot(data, aes(x = Club ,y = Age, fill = Club)) +
+  geom_violin(trim = F)+
+  geom_boxplot(width = 0.1)+
+  theme(axis.text.x = element_text(angle = 90), legend.position = "none")+
+  ylab("Age distribution amongst Clubs")
+```
+
+Tottenham seems to have the perfect age balance within its squad with most squad members being around 25 which is considered as the start of a footballer's peak. 
+
+Paris Saint Germain has the widest range in player ages with Buffon being the oldest member of the squad and Timothy Weah being amongst the youngest. 
+
+Fun Fact - Interestingly, Buffon made his professional debut against Timothy Weah's dad - George Weah who is currently the president of Liberia !
+
+
+#Clubs with the youngest Squad
+```{r echo=FALSE}
+Fifa %>%
+  group_by(Club)%>%
+  summarise(Club.Avg.Age = round(sum(Age)/length(Age),digits = 2))%>%
+  arrange(Club.Avg.Age)%>%
+  head(10)%>%
+  ggplot(aes(x = as.factor(Club) %>%
+             fct_reorder(Club.Avg.Age), y = Club.Avg.Age, label = Club.Avg.Age))+
+  geom_bar(stat = "identity", fill = "turquoise4")+
+  geom_text(inherit.aes = T, nudge_y = 0.5)+
+  xlab("Club")+
+  theme(axis.text.x = element_text(angle = 90))+
+  ylab("Average Squad Age")
+```
+
+Nordic club - FC Nordsj�lland has the youngest squad with the average age being considerably low at 20.26. A number of French clubs also make the list with LOSC Lille being the prominent amongst them. 
+
+#Is player jersey number related to Overall ?
+```{r echo=FALSE, warning=FALSE}
+Fifa %>%
+  group_by(Jersey.Number) %>%
+  summarise(Avg.Overall = sum(Overall)/length(Jersey.Number),
+            Player.Count = sum(Jersey.Number))%>%
+  arrange(-Avg.Overall)%>%
+  ggplot(aes(x = Jersey.Number, y = Avg.Overall,col = ifelse(Avg.Overall < 70,"darkgrey", "Red")))+
+  geom_point(position = "jitter")+
+  theme(legend.position = "none")+
+  geom_text_repel(aes(label = ifelse(Avg.Overall > 70, Jersey.Number, "")))
+```
+
+Jersey No 79 is an outlier with only two players making up the overall average. Number 10 remains the most sought after jersey in footballing teams and is mostly awarded to the best player in the  teams.
+
+
+![Messi confirms](https://images.cdn.fourfourtwo.com/sites/fourfourtwo.com/files/styles/image_landscape/public/lionelmessi-cropped_l532jjjrv5dh1oo3629ql464z.jpg?itok=ir6HZ8rl&c=87b6d99828d88c1b8ffe17a08d24fc7d)
+
+
+
+
+
+
+#Best free kick takers in the game
+```{r echo=FALSE}
+Fifa %>%
+  arrange(-FKAccuracy, -Curve)%>%
+  dplyr::select(Name, FKAccuracy, Curve, Age, Club)%>%
+  head(10)
+```
+
+Well, it's Messi again . .
+
+#Evaluating BMI to find most unfit players 
+```{r echo=FALSE}
+
+Fifa%>%
+  group_by(Name)%>%
+  mutate(BMI = (Weight*0.453592/(Height)^2))%>%
+  arrange(-BMI)%>%
+  select(Name, BMI)%>%
+  head(10)
+```
+
+![Akinfenwa. Don't mistake him for  Lukaku](https://ichef.bbci.co.uk/onesport/cps/480/cpsprodpb/AE59/production/_97333644_akinfenwa.jpg)
+
+
+##3. Player Value Prediction 
+
+```{r include=FALSE}
+
+Fifa_Int <- Fifa[ , map_lgl(Fifa, is.numeric)]
+
+mcor<- as.data.frame(cor(Fifa_Int, use = "complete.obs"))
+
+temp7 <- mcor["Value"]
+
+temp8 <- subset(temp7, Value > 0.30)
+
+temp9 <- rownames(temp8)
+
+library(caTools)
+set.seed(101)
+
+sample = sample.split(Fifa, SplitRatio = 0.6)
+
+train <- subset(Fifa, sample == TRUE)
+
+test <- subset(Fifa, sample == FALSE)
+
+fit <- lm(Value ~ Overall + Potential + Wage + International.Reputation + Skill.Moves + Release.Clause, data = train, na.action = na.omit)
+
+summary(fit)
+
+test_fit <- predict(fit, newdata = test)
+
+test_fit <- round(test_fit,0)
+
+test$Predicted.Value <- test_fit
+
+temp12 <- test[c("Name","Value","Predicted.Value")]
+
+library(dplyr)
+temp12 <- temp12 %>%
+  mutate(Difference = Value - Predicted.Value )
+
+temp12$Accuracy <- ifelse(temp12$Difference > 0.20 * temp12$Value , "No",ifelse(temp12$Difference < -(0.20 * temp12$Value),"No", "Yes"))
+
+table(temp12$Accuracy)
+
+
+```
+
+For predicting player value, we ran a correlation between the Value variable and all other variables in the dataset and for running a linear regression model we chose variables which had a correaltion of more than 0.3 
+
+The resultant linear regression model had a R square of over 98% !
+
+We predicted player values and after giving an error range of 20% in predicted value, we had an accuracy of 4174/(4174+2548) = 62.09%
+
+Please suggest some techniques to improve the model and other algorithms to predict player values.
+
+```{r}
+
+temp12%>%
+  head(20)
+
+```
