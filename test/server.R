@@ -9,7 +9,10 @@ library(shiny)
 library(shinydashboard)
 library(plotly)
 library(ggrepel)
+library(Cairo)
+library(data.table)
 
+Fifa1<-Fifa[1:1000,1:10] 
 
 
 options(shiny.maxRequestSize=30*1024^2)
@@ -17,9 +20,8 @@ getwd()
 #load("basetable.RData")
 
 server <- function(input, output,session) {
-Fifa1<-Fifa[1:1000,1:10] 
-  
-  #basetable <- read.csv("./basetable.csv", stringsAsFactors = F)
+
+    #basetable <- read.csv("./basetable.csv", stringsAsFactors = F)
   
   output$table <- renderDataTable({
     
@@ -27,7 +29,7 @@ Fifa1<-Fifa[1:1000,1:10]
     {return ()}
     data=Fifa1
     data
-  },options = list(searching = FALSE))
+  })
   
   
   ###########Graph 1############
@@ -51,7 +53,7 @@ Fifa1<-Fifa[1:1000,1:10]
   
 
   
-  ###########Graph 5############
+  ###########Graph 4############
   output$graph4<-renderPlotly({
     new<-YoungestSquad()
     new
@@ -75,10 +77,34 @@ Fifa1<-Fifa[1:1000,1:10]
     new<-MostUnfit()
     new
   })
+  
+  
   output$graph8<-renderPlotly({
     new<-VariationAge()
     new
   })
+  
+  output$graph9<-renderPlotly({
+    new<-AgeWage()
+    new
+  })
+  
+  output$graph10<-renderDataTable({
+    new<-CleanFinish()
+    new
+  })
+  
+  output$graph11<-renderDataTable({
+    new<-VolleyGoal_85()
+    new
+  })
+  
+  
+  output$graph12<-renderDataTable({
+    new<-Penalties()
+    new
+  })
+  
   
   
   ########### Squad Value in Millions ##############
@@ -98,11 +124,6 @@ Fifa1<-Fifa[1:1000,1:10]
       ylab("Squad Value in Million")
     
   })
-  
-  
-  
-  
-  
   
   
   
@@ -214,39 +235,33 @@ Fifa1<-Fifa[1:1000,1:10]
       ggplot(aes(x = Jersey.Number, y = Avg.Overall,col = ifelse(Avg.Overall < 70,"darkgrey", "Red")))+
       geom_point(position = "jitter")+
       theme(legend.position = "none")+
-      geom_text_repel(aes(label = ifelse(Avg.Overall > 70, Jersey.Number, "")))
-  })
-  
+      ylab("Jersey Nu.")
+   })
+   
   
 
   
-  
-  
-  
-  
-  
   ####################### Best free kick takers in the game #########################
-  BestFreekickers<-reactive({
-    Fifa %>%
-      arrange(-FKAccuracy, -Curve)%>%
-      dplyr::select(Name, FKAccuracy, Curve, Age, Club)%>%
-      head(10)
-    
-    
-  })
+   BestFreekickers<-reactive({
+     Fifa %>%
+       arrange(-FKAccuracy, -Curve)%>%
+       dplyr::select(Name, FKAccuracy, Curve, Age, Club)%>%
+       head(10)
   
+   })
   
+
   
   ####################### Most Unfit#########################
   MostUnfit<-reactive({
-    Fifa %>%
+    
+    Fifa%>%
       group_by(Name)%>%
       mutate(BMI = (Weight*0.453592/(Height)^2))%>%
       arrange(-BMI)%>%
       select(Name, BMI)%>%
       head(10)
-    
-    
+   
   })
   
   
@@ -262,14 +277,47 @@ Fifa1<-Fifa[1:1000,1:10]
              axis.line = element_line(colour = "black"))
     
   })
+
+  
+#######Age Vs Wage  
+  
+  AgeWage<-reactive({
+    ggplot(data = Fifa, aes(x = Age, y =Wage)) +
+      geom_line(color = "orange",size = 2) + labs(title = "WAGE vs AGE OF PLAYERS") +
+      theme( panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.background = element_blank(), 
+             axis.line = element_line(colour = "black"))
+    
+  })
   
   
+  # 
+  # CleanFinish<-reactive({
+  #   
+  #   longpass_85 <- subset(Fifa, LongPassing > 85 & ShortPassing > 85 & Vision > 85)
+  #   longpass_85<-longpass_85[,1:10]
+  # })
+  # 
+  # 
+  # VolleyGoal_85<-reactive({
+  #   
+  #   VolleyGoal_85 <- subset(Fifa, Volleys>80  & Curve > 80 & ShotPower > 80)
+  #   VolleyGoal_85<-VolleyGoal_85[,1:10]
+  # })
+  # 
+  # 
+  # Penalties<-reactive({
+  #   
+  #   Penalties <- subset(Fifa, Finishing>80  & Vision > 80 & Penalties > 80)
+  #   Penalties<-Penalties[,1:10]
+  #   
+  # })
+  # 
   
   
-  
-  
-  
-}
+} 
+
 
 
 
