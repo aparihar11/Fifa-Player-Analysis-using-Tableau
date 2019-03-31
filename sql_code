@@ -36,15 +36,40 @@ run;
 proc import datafile = "C:\Users\aparihar\Desktop\retakes\tableau_project\unemployment.csv" out = c.unemployment replace;
 run;
 
-/* split airquality stations by district */
+/* Clean airquality data  */
+data c.Airquality_new;
+set c.Airquality_new;
+O3_Hour= compress(O3_Hour,'h');
+O3_Hour = input(O3_Hour, 2.);
+NO2_Hour=compress(NO2_Hour,'h');
+NO2_Hour = input(NO2_Hour, 2.);
+run;
+
+
+
+/* convert in date format */
 
 proc sql;
 create table c.airquality_new as
+select *,input(strip(Generated_Date), ddmmyy10.) as report_date format=ddmmyy10.
+from c.airquality_new;
+quit;
+
+/* split airquality stations by district */
+ 
+proc sql;
+create table c.airquality_new as
 select *,
-scan(Station,2,"-") as District_Name
+
+scan(Station,2,"-") as District_Name,
+scan(Generated,1," ") as Generated_Date
 from c.air_quality
 Order by District_Name,Generated;
 quit;
+
+
+
+
 
 /* sum deaths by age group */
 
@@ -86,8 +111,6 @@ select Month, sum(Victims) as TotalVictims
 from c.Accidents
 Group by Month;
 quit;
-
-/*                             */
 
 
 
