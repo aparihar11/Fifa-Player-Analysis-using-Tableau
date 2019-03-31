@@ -172,4 +172,28 @@ quit;
 
 
 
+/* #################################################################NAMES- data ###########################################*/
+
+PROC sql;
+create table c.babynames_clean as 
+select Name,Gender, sum(Frequency) as total_freq
+from c.Babynames
+Group by Name, Gender;
+quit; 
+quit;
+
+
+
+proc sql;
+create table c.names_clean as 
+select Name,Gender,Frequency
+from c.Names
+where Decade='TOTAL';
+quit;
+
+
+
+
+
+
 
