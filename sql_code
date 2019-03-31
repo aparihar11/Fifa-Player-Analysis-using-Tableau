@@ -36,23 +36,17 @@ run;
 proc import datafile = "C:\Users\aparihar\Desktop\retakes\tableau_project\unemployment.csv" out = c.unemployment replace;
 run;
 
-/* Clean airquality data  */
-data c.Airquality_new;
-set c.Airquality_new;
-O3_Hour= compress(O3_Hour,'h');
-O3_Hour = input(O3_Hour, 2.);
-NO2_Hour=compress(NO2_Hour,'h');
-NO2_Hour = input(NO2_Hour, 2.);
-run;
+
+/* #################################################################AIRQUALITY - ACCIDENT data ###########################################*/
 
 
-
-/* convert in date format */
+/*  sum no. of victims by month */
 
 proc sql;
-create table c.airquality_new as
-select *,input(strip(Generated_Date), ddmmyy10.) as report_date format=ddmmyy10.
-from c.airquality_new;
+create table c.Accidents_Month as
+select Month, sum(Victims) as TotalVictims
+from c.Accidents
+Group by Month;
 quit;
 
 /* split airquality stations by district */
@@ -62,13 +56,73 @@ create table c.airquality_new as
 select *,
 
 scan(Station,2,"-") as District_Name,
-scan(Generated,1," ") as Generated_Date
+scan(Generated,1," ") as Generated_Date, scan(Generated,2," ") as Generated_Hours
 from c.air_quality
 Order by District_Name,Generated;
 quit;
 
+/* convert in date format */
+
+proc sql;
+create table c.airquality_new as
+select *,input(strip(Generated_Date), ddmmyy10.) as report_date format=ddmmyy10.
+from c.airquality_new;
+quit;
+
+/* Clean airquality data  */
+data c.Airquality_new;
+set c.Airquality_new;
+O3_Hour= compress(O3_Hour,'h');
+NO2_Hour=compress(NO2_Hour,'h');
+run;
 
 
+
+
+
+/* accidents in Nov */
+proc sql;
+create table c.Accidents_Nov as
+select *
+from c.Accidents
+where Month = 'November';
+quit;
+
+
+
+/* #################################################################TRANSPORT data ###########################################*/
+
+
+
+/* merge bus and tram files */ 
+PROC SQL;
+CREATE TABLE c.AllTransport as
+SELECT * from  c.Bus_stops
+union
+SELECT * from  c.Transports;
+RUN;
+
+
+
+
+
+/* #################################################################UNEMPLOYMENT data ###########################################*/
+
+
+/*  Unemployment   */
+
+proc sql;
+CREATE TABLE c.Unemployment_Year as
+SELECT Year, Demand_Occupation,Gender, sum(Number) as Number_year
+from c.unemployment
+Group by Year,Demand_Occupation,Gender;
+run;
+
+
+
+
+
+/* #################################################################DEATH- BIRTH data ###########################################*/
 
 
 /* sum deaths by age group */
@@ -81,43 +135,61 @@ from c.Deaths
 Group by Age;
 quit;
 
-/* sum deaths by district */
+/* sum deaths by year */
 
 proc sql;
 create table c.death_district as 
-select District_Name, sum(Number) as TotalDeath,Year
+select sum(Number) as TotalDeath,Year
 from c.Deaths
-Group by Year,District_Name;
-quit;
-
-/* accidents in Nov */
-proc sql;
-create table c.Accidents_Nov as
-select *
-from c.Accidents
-where Month = 'November';
+Group by Year;
 quit;
 
 
 
-
-
-
-/*  sum no. of victims by month */
+/* sum birth by Year */
 
 proc sql;
-create table c.Accidents_Month as
-select Month, sum(Victims) as TotalVictims
-from c.Accidents
-Group by Month;
+create table c.birth_Year as
+select input(Year, 18.) as Year, 
+sum(Number) as Total_born
+from c.Births
+Group by Year;
+quit;
+
+
+/*  merging birth death table  */
+
+
+PROC sql;
+create table c.birth_death as 
+select * from c.birth_Year as x , c.Death_year as y  
+where x.Year=y.Year;
+quit;
+
+
+/* #################################################################POPULATION-IMMIGRATION data ###########################################*/
+
+
+
+
+/* #################################################################NAMES- data ###########################################*/
+
+PROC sql;
+create table c.babynames_clean as 
+select Name,Gender, sum(Frequency) as total_freq
+from c.Babynames
+Group by Name, Gender;
+quit; 
 quit;
 
 
 
-
-
-
-
+proc sql;
+create table c.names_clean as 
+select Name,Gender,Frequency
+from c.Names
+where Decade='TOTAL';
+quit;
 
 
 
