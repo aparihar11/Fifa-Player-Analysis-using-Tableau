@@ -37,7 +37,17 @@ proc import datafile = "C:\Users\aparihar\Desktop\retakes\tableau_project\unempl
 run;
 
 
+/* #################################################################AIRQUALITY - ACCIDENT data ###########################################*/
 
+
+/*  sum no. of victims by month */
+
+proc sql;
+create table c.Accidents_Month as
+select Month, sum(Victims) as TotalVictims
+from c.Accidents
+Group by Month;
+quit;
 
 /* split airquality stations by district */
  
@@ -69,24 +79,6 @@ run;
 
 
 
-/* sum deaths by age group */
-
-proc sql;
-create table c.death_agegroup as
-select Age,
-sum(Number) as TotalDeath
-from c.Deaths
-Group by Age;
-quit;
-
-/* sum deaths by district */
-
-proc sql;
-create table c.death_district as 
-select District_Name, sum(Number) as TotalDeath,Year
-from c.Deaths
-Group by Year,District_Name;
-quit;
 
 /* accidents in Nov */
 proc sql;
@@ -98,26 +90,84 @@ quit;
 
 
 
+/* #################################################################TRANSPORT data ###########################################*/
 
 
 
-/*  sum no. of victims by month */
+/* merge bus and tram files */ 
+PROC SQL;
+CREATE TABLE c.AllTransport as
+SELECT * from  c.Bus_stops
+union
+SELECT * from  c.Transports;
+RUN;
+
+
+
+
+
+/* #################################################################UNEMPLOYMENT data ###########################################*/
+
+
+/*  Unemployment   */
 
 proc sql;
-create table c.Accidents_Month as
-select Month, sum(Victims) as TotalVictims
-from c.Accidents
-Group by Month;
+CREATE TABLE c.Unemployment_Year as
+SELECT Year, Demand_Occupation,Gender, sum(Number) as Number_year
+from c.unemployment
+Group by Year,Demand_Occupation,Gender;
+run;
+
+
+
+
+
+/* #################################################################DEATH- BIRTH data ###########################################*/
+
+
+/* sum deaths by age group */
+
+proc sql;
+create table c.death_agegroup as
+select Age,
+sum(Number) as TotalDeath
+from c.Deaths
+Group by Age;
+quit;
+
+/* sum deaths by year */
+
+proc sql;
+create table c.death_district as 
+select sum(Number) as TotalDeath,Year
+from c.Deaths
+Group by Year;
 quit;
 
 
 
+/* sum birth by Year */
+
+proc sql;
+create table c.birth_Year as
+select input(Year, 18.) as Year, 
+sum(Number) as Total_born
+from c.Births
+Group by Year;
+quit;
 
 
+/*  merging birth death table  */
 
 
+PROC sql;
+create table c.birth_death as 
+select * from c.birth_Year as x , c.Death_year as y  
+where x.Year=y.Year;
+quit;
 
 
+/* #################################################################POPULATION-IMMIGRATION data ###########################################*/
 
 
 
