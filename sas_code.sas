@@ -90,6 +90,26 @@ quit;
 
 
 
+
+/* accidents by part of day */
+proc sql;
+create table c.Accidents_time as
+select Part_of_the_day,sum(Victims) as totalfatalities
+from c.Accidents
+group by Part_of_the_day;
+quit;
+
+
+/* accidents by day of week */
+proc sql;
+create table c.Accidents_Weekday as
+select Weekday,sum(Victims) as totalfatalities
+from c.Accidents
+group by Weekday;
+quit;
+
+
+
 /* #################################################################TRANSPORT data ###########################################*/
 
 
