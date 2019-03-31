@@ -171,6 +171,46 @@ quit;
 
 
 
+/*  population by gender,year  */
+proc sql;
+create table c.population_gender as 
+select Gender, Year,sum(Number) as tota_pop
+from c.Population
+group by Gender, Year;
+quit;
+
+
+/* by age group*/
+
+proc sql;
+create table c.population_age as 
+select Gender, Age, Year,sum(Number) as tota_pop
+from c.Population
+group by Gender,Age, Year;
+quit;
+
+/* immigrant concentration in areas */
+proc sql;
+create table c.population_nationality as 
+select Neighborhood_Name,Nationality,Number
+from c.Imm_by_nationality
+where Number GE 100 & Nationality NE 'Spain';
+quit;
+
+
+/* immigrant concentration in areas */
+proc sql;
+create table c.population_nationalitycount as 
+select Nationality,sum(Number) as Total
+from c.Imm_by_nationality
+Group by Nationality;
+quit;
+
+
+
+
+
+
 
 /* #################################################################NAMES- data ###########################################*/
 
